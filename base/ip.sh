@@ -18,14 +18,17 @@ IP_ADDRESS=$1
 NETMASK="255.255.255.0"
 GATEWAY=$2
 
-# 设置 IP 地址和子网掩码
-sudo ifconfig "$INTERFACE" "$IP_ADDRESS" netmask "$NETMASK"
+network_config=(
+"network:"
+"    ethernets:"
+"        ens33:"
+"            dhcp4: no"
+"            addresses: [$IP_ADDRESS/24]"
+"            gateway4: $GATEWAY"
+"            nameservers:"
+"                addresses: [$GATEWAY]"
+"    version: 2"
+)
 
-# 设置网关
-sudo route add default gw "$GATEWAY" "$INTERFACE"
-
-# 显示设置后的网络配置信息
-echo "IP 地址设置成功:"
-ifconfig "$INTERFACE"
-route -n
-
+sudo echo -e $network_config | sudo tee /etc/netplan/50-cloud-init.yaml > /dev/null
+sudo netplan apply
