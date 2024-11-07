@@ -31,5 +31,5 @@ EOF
 )
 
 
-sudo echo -e $network_config | sudo tee /etc/netplan/50-cloud-init.yaml > /dev/null
+sudo echo "$network_config" | sudo tee /etc/netplan/50-cloud-init.yaml > /dev/null
 sudo netplan apply
