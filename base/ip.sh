@@ -15,20 +15,21 @@ if [ -z "$HTTP_PROXY" ]; then
 fi
 
 IP_ADDRESS=$1
-NETMASK="255.255.255.0"
 GATEWAY=$2
 
-network_config=(
-"network:"
-"    ethernets:"
-"        ens33:"
-"            dhcp4: no"
-"            addresses: [$IP_ADDRESS/24]"
-"            gateway4: $GATEWAY"
-"            nameservers:"
-"                addresses: [$GATEWAY]"
-"    version: 2"
+network_config=$(cat <<EOF
+network:
+    ethernets:
+        ens33:
+            dhcp4: no
+            addresses: [$IP_ADDRESS/24]
+            gateway4: $GATEWAY
+            nameservers:
+                addresses: [$GATEWAY]
+    version: 2
+EOF
 )
+
 
 sudo echo -e $network_config | sudo tee /etc/netplan/50-cloud-init.yaml > /dev/null
 sudo netplan apply
