@@ -12,8 +12,12 @@ sudo systemctl daemon-reload
 sudo systemctl restart docker
 sudo docker pull nillion/verifier:v1.0.1
 sudo mkdir -p nillion/verifier
-sudo docker run -v ./nillion/verifier:/var/tmp nillion/verifier:v1.0.1 initialise
-sudo docker run -d -v ./nillion/verifier:/var/tmp nillion/verifier:v1.0.1 verify --rpc-endpoint "https://testnet-nillion-rpc.lavenderfive.com"
+
+FILE="nillion/verifier/credentials.json"
+
+if [ ! -e "$FILE" ]; then
+    sudo docker run -v ./nillion/verifier:/var/tmp nillion/verifier:v1.0.1 initialise
+fi
 
 echo 'address :'
 jq -r '.address' nillion/verifier/credentials.json
