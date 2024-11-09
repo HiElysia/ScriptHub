@@ -1,12 +1,12 @@
 #!/bin/sh
 
-if [ -z "$1" ]; then
-    echo "请提供新密码作为第一个参数。"
+if [ -z "$2" ]; then
+    echo "请提供用户名和新密码。"
     exit 1
 fi
 
-username=$(whoami)
-new_password=$1
+username=$1
+new_password=$2
 
-sudo chpasswd <<< "$username:$new_password"
+echo "$username:$new_password" | sudo chpasswd
 echo "success"
