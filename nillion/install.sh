@@ -4,8 +4,8 @@ sudo apt update
 sudo apt install -y docker.io jq
 sudo mkdir -p /etc/systemd/system/docker.service.d/
 
-if [ -n "$HTTP_PROXY" ]; then
-    sudo echo -e "[Service]\nEnvironment=\"HTTP_PROXY=$HTTP_PROXY\"\nEnvironment=\"HTTPS_PROXY=$HTTP_PROXY\"\n" | sudo tee /etc/systemd/system/docker.service.d/http-proxy.conf > /dev/null
+if [ -n "$1" ]; then
+    sudo echo -e "[Service]\nEnvironment=\"HTTP_PROXY=$1\"\nEnvironment=\"HTTPS_PROXY=$1\"\n" | sudo tee /etc/systemd/system/docker.service.d/http-proxy.conf > /dev/null
 fi
 
 sudo systemctl daemon-reload
