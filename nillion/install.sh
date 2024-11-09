@@ -5,6 +5,7 @@ sudo apt install -y docker.io jq
 sudo mkdir -p /etc/systemd/system/docker.service.d/
 
 if [ -n "$1" ]; then
+    echo "Setting docker proxy $1"
     sudo echo -e "[Service]\nEnvironment=\"HTTP_PROXY=$1\"\nEnvironment=\"HTTPS_PROXY=$1\"\n" | sudo tee /etc/systemd/system/docker.service.d/http-proxy.conf > /dev/null
 fi
 
@@ -16,6 +17,7 @@ sudo mkdir -p nillion/verifier
 FILE="nillion/verifier/credentials.json"
 
 if [ ! -e "$FILE" ]; then
+    echo "Init Wallet"
     sudo docker run -v ./nillion/verifier:/var/tmp nillion/verifier:v1.0.1 initialise
 fi
 
