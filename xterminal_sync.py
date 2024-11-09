@@ -116,7 +116,6 @@ if __name__ == '__main__':
             thread_imp.start()
             thread_list.append(thread_imp)
             pbar.update(1)
-            break
 
     for thread_imp in thread_list:
         thread_imp.join()
