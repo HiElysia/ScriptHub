@@ -8,5 +8,5 @@ fi
 username=$(whoami)
 new_password=$1
 
-echo "$username:$new_password" | sudo chpasswd
+sudo chpasswd <<< "$username:$new_password"
 echo "success"
