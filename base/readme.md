@@ -21,11 +21,14 @@ curl -s https://raw.githubusercontent.com/HiElysia/ScriptHub/refs/heads/main/bas
 
 ====
 
-## 修改主机密码
+## 启动远程浏览器
 
 安装远程Chrome.sh .参数为VNC密码,VNC用户名是kasm_user
 
 ```
+直接启动浏览器
 curl -s https://raw.githubusercontent.com/HiElysia/ScriptHub/refs/heads/main/base/webchrome.sh | sudo sh -s root
+启动浏览器并且带目录,参数2是指定Chrome的数据目录
+curl -s https://raw.githubusercontent.com/HiElysia/ScriptHub/refs/heads/main/base/webchrome.sh | sudo sh -s root chrome_data
 ```
 
