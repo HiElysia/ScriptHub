@@ -7,7 +7,10 @@ sudo docker pull kasmweb/chrome:1.16.0
 if [ -n "$2" ]; then
     echo "Depoly Docker VNC With Password and Chrome Dir"
     mkdir -p $2
-    sudo docker run --rm -d --shm-size=1024m -p 6901:6901 -v $2:/var/tmp -e VNC_PW=$1 -e APP_ARGS=--user-data-dir=/var/tmp kasmweb/chrome:1.16.0
+    sudo chmod 777 $2
+    current_dir=$(dirname "$(realpath "$0")")
+    data_dir="$current_dir/$2"
+    sudo docker run --rm -d --shm-size=1024m -p 6901:6901 -v $data_dir:/home/kasm-user -e VNC_PW=$1 kasmweb/chrome:1.16.0
 elif [ -n "$1" ]; then
     echo "Depoly Docker VNC With Password"
     sudo docker run --rm -d --shm-size=1024m -p 6901:6901 -e VNC_PW=$1 kasmweb/chrome:1.16.0
