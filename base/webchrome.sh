@@ -10,6 +10,7 @@ if [ -n "$2" ]; then
     sudo chmod 777 $2
     current_dir=$(dirname "$(realpath "$0")")
     data_dir="$current_dir/$2"
+    echo $data_dir
     sudo docker run --rm -d --shm-size=1024m -p 6901:6901 -v $data_dir:/home/kasm-user -e VNC_PW=$1 kasmweb/chrome:1.16.0
 elif [ -n "$1" ]; then
     echo "Depoly Docker VNC With Password"
