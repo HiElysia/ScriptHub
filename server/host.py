@@ -219,7 +219,7 @@ def requires_auth(f):
 
 @app.route('/get_performance')
 @requires_auth
-def get_performance():
+def get_performance_api():
     cpu_count,cpu_percent,virtual_memory,disk_usage,disk_io_counters,net_io_counters = get_performance()
 
     return jsonify({
