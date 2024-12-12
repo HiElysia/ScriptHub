@@ -1,6 +1,8 @@
 
+import json
 import os
 import psutil
+import sys
 
 from flask import *
 
@@ -8,17 +10,15 @@ from flask import *
 
 ##  检测服务运行状态
 
-'''
 KEEPALIVE_SERVICE = {
-    'tg_bot': {
-        'description': 'TG Bot Service',
-        'exec_start': 'python3 ./tg_bot_server.py',
-        'exec_user': 'ubuntu',
+    'host': {
+        'description': 'Host Service',
+        'exec_start': 'python3 ./host.py',
+        'exec_user': 'root',
         'env_list': [],
-        'work_directory': '/home/ubuntu/project_meme/tg_bot_api',
+        'work_directory': '/root',
     },
 }
-'''
 
 
 def is_sudo():
@@ -171,14 +171,185 @@ class service_ctl:
 
 ##  获取配置性能
 
-print(dir(psutil))
-print(psutil.cpu_percent())
-print(psutil.cpu_count())
-print(psutil.virtual_memory())
-print(psutil.disk_usage('/'))
-print(psutil.disk_io_counters())
-print(psutil.net_io_counters())
+def get_performance():
+    cpu_percent = psutil.cpu_percent()
+    cpu_count = psutil.cpu_count()
+    virtual_memory = psutil.virtual_memory()
+    virtual_memory = (virtual_memory.total,virtual_memory.free,virtual_memory.used,virtual_memory.percent)
+    disk_usage = psutil.disk_usage('/')
+    disk_usage = (disk_usage.total,disk_usage.free,disk_usage.used,disk_usage.percent)
+    disk_io_counters = psutil.disk_io_counters()
+    disk_io_counters = (disk_io_counters.read_bytes,disk_io_counters.write_bytes)
+    net_io_counters = psutil.net_io_counters()
+    net_io_counters = (net_io_counters.bytes_recv,net_io_counters.bytes_sent)
+
+    return cpu_count,cpu_percent,virtual_memory,disk_usage,disk_io_counters,net_io_counters
+
+
+##  后台服务
+
+app = Flask(__name__)
+
+VALID_USERNAME = 'ScriptHub'
+
+if 2 == len(sys.argv):
+    VALID_PASSWORD = sys.argv[1]
+else:
+    print('UnSet HTTP-Auth Password')
+    exit()
+
+
+def check_auth(auth):
+    if not auth or not auth.username or not auth.password:
+        return False
+    return auth.username == VALID_USERNAME and auth.password == VALID_PASSWORD
+
+def requires_auth(f):
+    def decorated(*args, **kwargs):
+        auth = request.authorization
+        if not check_auth(auth):
+            return jsonify({"message": "Authentication required"}), 401, {
+                "WWW-Authenticate": 'Basic realm="Login Required"'
+            }
+        return f(*args, **kwargs)
+    return decorated
+
+@app.route('/get_performance')
+@requires_auth
+def get_performance():
+    cpu_count,cpu_percent,virtual_memory,disk_usage,disk_io_counters,net_io_counters = get_performance()
+
+    return jsonify({
+        'cpu_count': cpu_count,
+        'cpu_percent': cpu_percent,
+        'virtual_memory': virtual_memory,
+        'disk_usage': disk_usage,
+        'disk_io_counters': disk_io_counters,
+        'net_io_counters': net_io_counters,
+    })
+
+SERVICE_CONFIG_PATH = 'service_config.ini'
+
+def load_service_config():
+    try:
+        file = open(SERVICE_CONFIG_PATH)
+        data = json.loads(file.read())
+        file.close()
+    except:
+        data = {}
+
+    return data
+
+def save_service_config(service_data):
+    file = open(SERVICE_CONFIG_PATH,'w')
+    file.write(json.dumps(service_data))
+    file.close()
+
+
+@app.route('/add_server',methods=['POST'])
+@requires_auth
+def add_server():
+    '''
+    {
+        'name': '123',
+        'description': 'Host Service',
+        'exec_start': 'python3 ./host.py',
+        'exec_user': 'root',
+        'env_list': [],
+        'work_directory': '/root',
+    }
+    '''
+    post_data = request.json()
+    server_name = post_data.get('name')
+    server_description = post_data.get('description')
+    server_exec_start = post_data.get('exec_start')
+    server_exec_user = post_data.get('exec_user')
+    server_env_list = post_data.get('env_list')
+    server_work_directory = post_data.get('work_directory')
+
+    service_ctl.update(server_name,server_description,server_exec_start,server_exec_user,server_env_list,server_work_directory)
+
+    service_config = load_service_config()
+    service_config[server_name] = {
+        'description': server_description,
+        'exec_start': server_exec_start,
+        'exec_user': server_exec_user,
+        'env_list': server_env_list,
+        'work_directory': server_work_directory,
+    }
+    save_service_config(service_config)
+
+    return jsonify({
+        'success': 'ok'
+    })
+
+@app.route('/stop_server')
+@requires_auth
+def stop_server():
+    server_name = request.args.get('name')
+    
+    if not server_name:
+        return jsonify({
+            'error': 'no server name'
+        })
+
+    service_config = load_service_config()
+
+    if not server_name in service_config:
+        return jsonify({
+            'error': 'not found server'
+        })
+
+    service_ctl.stop(server_name)
+
+    return jsonify({
+        'success': 'ok'
+    })
+
+@app.route('/get_server_state')
+@requires_auth
+def get_server_state():
+    service_config = load_service_config()
+    result = {}
+
+    for service_name in service_config.keys():
+        service_state = service_ctl.state(service_name)
+        result[service_name] = service_state
+
+    return jsonify({
+        'state': result
+    })
+
+@app.route('/reboot_server')
+@requires_auth
+def reboot_server():
+    server_name = request.args.get('name')
+    
+    if not server_name:
+        return jsonify({
+            'error': 'no server name'
+        })
+
+    service_config = load_service_config()
+
+    if not server_name in service_config:
+        return jsonify({
+            'error': 'not found server'
+        })
+
+    service_ctl.reboot(server_name)
+
+    return jsonify({
+        'success': 'ok'
+    })
+
+
+
 
 if __name__ == '__main__':
-    pass
+    service_ctl.setup(KEEPALIVE_SERVICE)
+
+    app.run(host='0.0.0.0',port=57575,
+            #ssl_context=('cert.pem', 'key.pem')
+            )
 
