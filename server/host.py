@@ -13,7 +13,7 @@ from flask import *
 KEEPALIVE_SERVICE = {
     'host': {
         'description': 'Host Service',
-        'exec_start': 'python3 ./host.py',
+        'exec_start': 'python3 /tmp/host.py',
         'exec_user': 'root',
         'env_list': [],
         'work_directory': '/root',
