@@ -4,6 +4,8 @@ import os
 import psutil
 import sys
 
+from functools import wraps
+
 from flask import *
 
 
@@ -205,6 +207,7 @@ def check_auth(auth):
     return auth.username == VALID_USERNAME and auth.password == VALID_PASSWORD
 
 def requires_auth(f):
+    @wraps(f)
     def decorated(*args, **kwargs):
         auth = request.authorization
         if not check_auth(auth):
