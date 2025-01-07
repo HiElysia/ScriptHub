@@ -1,10 +1,17 @@
 
+import base64
+import hashlib
 import json
 import os
 import psutil
+import shlex
+import socket
 import sys
+import time
 
 from functools import wraps
+
+import requests
 
 from flask import *
 
@@ -186,6 +193,112 @@ def get_performance():
     net_io_counters = (net_io_counters.bytes_recv,net_io_counters.bytes_sent)
 
     return cpu_count,cpu_percent,virtual_memory,disk_usage,disk_io_counters,net_io_counters
+
+def get_local_ip():
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(('8.8.8.8', 80))
+            return s.getsockname()[0]
+    except Exception as e:
+        return '0.0.0.0'
+
+def get_public_ip():
+    try:
+        response = requests.get("http://ip.sb",headers={'User-Agent':'curl/7.68.0','Accept':'*/*'}, timeout=5)
+        response.raise_for_status()
+        return response.text
+    except requests.RequestException as e:
+        return '0.0.0.0'
+
+
+##  推送服务
+
+def wechat_send_text(wechat_token,text):
+    responed = requests.post('https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=' + wechat_token,json={
+            "msgtype":"text",
+            "text":{
+                "content" : text
+            },
+            "safe":0
+        })
+    
+    return responed.json()
+
+def wechat_send_markdown(wechat_token,markdown_text):
+    responed = requests.post('https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=' + wechat_token,json={
+            "msgtype":"markdown",
+            "markdown":{
+                "content" : markdown_text
+            },
+            "safe":0
+        })
+    
+    return responed.json()
+
+def wechat_send_picture(wechat_token,picture_data):
+    responed = requests.post('https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=' + wechat_token,json={
+            "msgtype":"image",
+            "image":{
+                "base64": base64.b64encode(picture_data).decode(),
+                "md5": hashlib.md5(picture_data).hexdigest()
+            },
+            "safe":0
+        })
+    
+    return responed.json()
+
+push_notification = False
+
+PUSH_TYPE_WECHAT = 1
+PUSH_TYPE_TELEGRAM = 2
+
+def make_performance_report_by_markdown(server_name,is_public_ip):
+    if is_public_ip:
+        ip = get_public_ip()
+    else:
+        ip = get_local_ip()
+
+    cpu_count,cpu_percent,virtual_memory,disk_usage,disk_io_counters,net_io_counters = get_performance()
+    result = '''主机名%s,IP%s:
+    > CPU占用率:%d (%d)
+    > 内存占用率:%d (%d)
+    > 磁盘占用率:%0.1f (%d)
+    ''' % (server_name,ip,
+           cpu_percent,cpu_count,
+           virtual_memory[-1],virtual_memory[0],
+           disk_usage[-1],disk_usage[0],
+           )
+
+    return result
+
+def make_task_live_report_by_markdown(check_flag_list):
+    result = ''
+
+    for process_name,ps_aux_flag in check_flag_list:
+        task_num = int(os.popen('ps aux | grep %s | wc -l' % (shlex.quote(ps_aux_flag))).read().strip()) - 1
+        result += '服务名:%s 运行数:%d\n' % (process_name,task_num)
+    
+    if result:
+        result = result[:-1]
+
+    return result
+
+def push_thread(push_type,token,publish_config):
+    global push_notification
+
+    push_interval = int(publish_config.get('time_interval'))
+    check_flag_list = publish_config.get('check_flag',[])
+    server_name = publish_config.get('server_name','')
+    is_public_ip = publish_config.get('is_public_ip',False)
+
+    while push_notification:
+        report = make_performance_report_by_markdown(server_name,is_public_ip)
+        report += '\n' + make_task_live_report_by_markdown(check_flag_list)
+
+        if PUSH_TYPE_WECHAT == push_type:
+            wechat_send_markdown(token,report)
+
+        time.sleep(push_interval)
 
 
 ##  后台服务
